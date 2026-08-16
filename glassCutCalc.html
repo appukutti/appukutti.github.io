@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass Cut Calculator Pro</title>
+    <!-- Core Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Three.js STL Exporter -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+    <style>
+        :root {
+            --primary: #007AFF;
+            --bg: #F5F5F7;
+            --card: #FFFFFF;
+            --text: #1D1D1F;
+            --border: #D2D2D7;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 950px;
+            width: 100%;
+        }
+        .container {
+            background-color: var(--card);
+            padding: 32px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 768px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        h2 {
+            margin-top: 0;
+            margin-bottom: 24px;
+            text-align: center;
+            font-weight: 700;
+            color: #111;
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 16px;
+            color: #333;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
+        }
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .input-field {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input, select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: #FAFAFA;
+            font-family: inherit;
+        }
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+            background-color: #FFF;
+        }
+        .tank-suggestion {
+            display: none;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #005bb5;
+            background-color: #e6f2ff;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #b3d4ff;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .message-box {
+            background-color: #FAFAFA;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        textarea {
+            width: 100%;
+            height: 480px;
+            background: transparent;
+            border: none;
+            resize: none;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text);
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        button:hover {
+            background-color: #005bb5;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-secondary {
+            background-color: #34c759;
+            margin-top: 12px;
+        }
+        .btn-secondary:hover {
+            background-color: #2da94c;
+        }
+        .toast {
+            text-align: center;
+            color: #28a745;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 12px;
+            height: 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .visual-container {
+            width: 100%;
+            height: 320px;
+            background-color: #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+            border: 1px solid var(--border);
+        }
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        #renderCanvas:active {
+            cursor: grabbing;
+        }
+        #layoutCanvas {
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+        }
+        .hint {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            pointer-events: none;
+        }
+        .waste-info {
+            font-size: 14px;
+            color: #d9534f;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="container">
+        <h2>Glass Cut Calculator Pro</h2>
+        
+        <div class="grid-layout">
+            <!-- Left Column: Inputs -->
+            <div>
+                <div class="input-group">
+                    <div class="input-field">
+                        <label>Project Type</label>
+                        <select id="projectType" onchange="calculateAll()">
+                            <option value="display">Display Case (With Top)</option>
+                            <option value="fishtank">Fish Tank (No Top)</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label>Measurement Unit</label>
+                        <select id="unit" onchange="handleUnitChange()">
+                            <option value="mm" selected>Millimeters (mm)</option>
+                            <option value="cm">Centimeters (cm)</option>
+                            <option value="in">Inches (in)</option>
+                            <option value="ft">Feet (ft)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-field" style="margin-bottom: 16px;">
+                    <label>Glass Thickness & Price</label>
+                    <select id="t" onchange="calculateAll()">
+                        <option value="4" data-price="60" selected>4mm (60 Rs/sqft)</option>
+                        <option value="5" data-price="70">5mm (70 Rs/sqft)</option>
+                        <option value="6" data-price="95">6mm (95 Rs/sqft)</option>
+                        <option value="8" data-price="125">8mm (125 Rs/sqft)</option>
+                        <option value="12" data-price="165">12mm (165 Rs/sqft)</option>
+                        <option value="15" data-price="250">15mm (250 Rs/sqft) - Heavy Duty</option>
+                        <option value="19" data-price="350">19mm (350 Rs/sqft) - Ultra Heavy</option>
+                    </select>
+                </div>
+                
+                <div id="tankSuggestion" class="tank-suggestion"></div>
+
+                <div class="input-group">
+                    <div class="input-field">
+                        <label>Total Length <span class="unit-label">(mm)</span></label>
+                        <input type="number" id="l" value="434" oninput="calculateAll()">
+                    </div>
+                    <div class="input-field">
+                        <label>Total Width <span class="unit-label">(mm)</span></label>
+                        <input type="number" id="w" value="82" oninput="calculateAll()">
+                    </div>
+                    <div class="input-field">
+                        <label>Total Height <span class="unit-label">(mm)</span></label>
+                        <input type="number" id="h" value="80" oninput="calculateAll()">
+                    </div>
+                </div>
+
+                <button onclick="copyMessage()">Copy Message for Glass Cutter</button>
+                <div id="toast" class="toast">Message copied to clipboard!</div>
+            </div>
+
+            <!-- Right Column: Output Message -->
+            <div>
+                <div class="message-box">
+                    <textarea id="outputMsg" readonly></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Section: Visualizations -->
+    <div class="grid-layout">
+        <!-- 3D Render -->
+        <div class="container">
+            <h3>3D Assembly Render</h3>
+            <div class="visual-container" style="margin-bottom: 0;">
+                <canvas id="renderCanvas"></canvas>
+                <div class="hint">Click and drag to rotate</div>
+            </div>
+            <!-- Added Download STL Button -->
+            <button class="btn-secondary" onclick="downloadSTL()">Download as STL</button>
+        </div>
+
+        <!-- 2D Layout -->
+        <div class="container">
+            <h3>Optimized Cutting Layout</h3>
+            <div id="wasteInfo" class="waste-info"></div>
+            <div class="visual-container">
+                <canvas id="layoutCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- STATE & GLOBAL VARIABLES ---
+    let currentUnit = 'mm';
+    let scene, camera, renderer, glassGroup;
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    function showToast(msg, isError = false) {
+        let toast = document.getElementById("toast");
+        toast.innerText = msg;
+        toast.style.color = isError ? "#d9534f" : "#28a745";
+        toast.classList.add("show");
+        setTimeout(() => { toast.classList.remove("show"); }, 3000);
+    }
+
+    // --- UNIT CONVERSION LOGIC ---
+    function handleUnitChange() {
+        let newUnit = document.getElementById('unit').value;
+        if (newUnit === currentUnit) return;
+        
+        let toMm = { 'mm': 1, 'cm': 10, 'in': 25.4, 'ft': 304.8 };
+        let fromMm = { 'mm': 1, 'cm': 0.1, 'in': 1/25.4, 'ft': 1/304.8 };
+        let multiplier = toMm[currentUnit] * fromMm[newUnit];
+        
+        ['l', 'w', 'h'].forEach(id => {
+            let val = parseFloat(document.getElementById(id).value) || 0;
+            let newVal = val * multiplier;
+            // Round nicely
+            if (Math.abs(newVal - Math.round(newVal)) < 0.001) newVal = Math.round(newVal);
+            document.getElementById(id).value = newVal === Math.round(newVal) ? newVal : newVal.toFixed(2);
+        });
+        
+        document.querySelectorAll('.unit-label').forEach(el => el.innerText = `(${newUnit})`);
+        currentUnit = newUnit;
+        calculateAll();
+    }
+
+    // --- MAIN LOGIC ---
+    function calculateAll() {
+        // 1. Get raw inputs
+        let l_in = parseFloat(document.getElementById('l').value) || 0;
+        let w_in = parseFloat(document.getElementById('w').value) || 0;
+        let h_in = parseFloat(document.getElementById('h').value) || 0;
+        let isFishTank = document.getElementById('projectType').value === 'fishtank';
+        
+        let tSelect = document.getElementById('t');
+        let t = parseFloat(tSelect.value) || 0;
+        let pricePerSqFt = parseFloat(tSelect.options[tSelect.selectedIndex].getAttribute('data-price')) || 0;
+
+        // 2. Convert to mm for standardized backend math
+        let toMm = { 'mm': 1, 'cm': 10, 'in': 25.4, 'ft': 304.8 };
+        let scale = toMm[currentUnit];
+        
+        let l_mm = l_in * scale;
+        let w_mm = w_in * scale;
+        let h_mm = h_in * scale;
+
+        // 3. Fish Tank Safety & Capacity Logic
+        if (isFishTank) {
+            // Internal dimensions in mm
+            let innerL = l_mm - (2 * t);
+            let innerW = w_mm - (2 * t);
+            let innerH = h_mm - t;
+            
+            let capacityLiters = 0;
+            if (innerL > 0 && innerW > 0 && innerH > 0) {
+                capacityLiters = (innerL * innerW * innerH) / 1000000;
+            }
+
+            // Auto-Suggest Thickness based on height (Hydrostatic pressure)
+            let suggestedT = 4;
+            if (h_mm > 750) suggestedT = 15;
+            else if (h_mm > 600) suggestedT = 12;
+            else if (h_mm > 450) suggestedT = 8;
+            else if (h_mm > 300) suggestedT = 6;
+            else if (h_mm > 200) suggestedT = 5;
+            
+            // Add volume buffer safety
+            if (capacityLiters > 250 && suggestedT < 12) suggestedT = 12;
+            if (capacityLiters > 100 && suggestedT < 8) suggestedT = 8;
+
+            // Auto-update if dangerous
+            let warningHtml = "";
+            if (t < suggestedT) {
+                let option = tSelect.querySelector(`option[value="${suggestedT}"]`);
+                if (option) {
+                    tSelect.value = suggestedT;
+                    t = suggestedT; // Update actual thickness being used
+                    pricePerSqFt = parseFloat(option.getAttribute('data-price'));
+                    showToast(`Auto-adjusted glass to ${suggestedT}mm for water pressure safety!`);
+                }
+                warningHtml = `<br><span style="color: #d9534f; font-size: 12px; display: block; margin-top: 5px;">⚠️ Glass thickness was increased to safely hold water pressure.</span>`;
+            }
+
+            document.getElementById('tankSuggestion').innerHTML = `<strong>🐠 Tank Capacity:</strong> ~${capacityLiters.toFixed(1)} Liters <br> <strong>🛡️ Recommended Safety Thickness:</strong> ${suggestedT}mm+ ${warningHtml}`;
+            document.getElementById('tankSuggestion').style.display = 'block';
+        } else {
+            document.getElementById('tankSuggestion').style.display = 'none';
+        }
+
+        // 4. Calculate Cuts (Backend Math in MM)
+        // If Fishtank: walls sit ON the bottom glass (h-t). If Display: walls between top/bottom (h-2t)
+        let frontHeight_mm = isFishTank ? (h_mm - t) : (h_mm - 2 * t);
+        let sideWidth_mm = w_mm - (2 * t);
+
+        // 5. Generate Message and Costs
+        generateMessage(l_mm, w_mm, frontHeight_mm, sideWidth_mm, t, pricePerSqFt, isFishTank, scale);
+
+        // 6. Update Visuals using precise MM coordinates
+        update3D(l_mm, w_mm, h_mm, t, isFishTank);
+        update2DLayout(l_mm, w_mm, frontHeight_mm, sideWidth_mm, isFishTank);
+    }
+
+    function generateMessage(l_mm, w_mm, fH_mm, sW_mm, t, price, isFishTank, scale) {
+        // Area calculations in mm^2
+        let qtyBottom = isFishTank ? 1 : 2;
+        let areaBottom_mm2 = (l_mm * w_mm) * qtyBottom;
+        let areaFrontBack_mm2 = (l_mm * fH_mm) * 2;
+        let areaLeftRight_mm2 = (sW_mm * fH_mm) * 2;
+        
+        let totalAreaMm2 = areaBottom_mm2 + areaFrontBack_mm2 + areaLeftRight_mm2;
+        
+        // Convert Area to Sq Ft
+        const mm2ToSqFt = 92903.04;
+        let sqftBottom = areaBottom_mm2 / mm2ToSqFt;
+        let sqftFrontBack = areaFrontBack_mm2 / mm2ToSqFt;
+        let sqftLeftRight = areaLeftRight_mm2 / mm2ToSqFt;
+        let totalSqFt = totalAreaMm2 / mm2ToSqFt;
+
+        // Cost
+        let costBottom = sqftBottom * price;
+        let costFrontBack = sqftFrontBack * price;
+        let costLeftRight = sqftLeftRight * price;
+        let totalCost = totalSqFt * price;
+
+        // Formatter function to show UserUnit (MM) nicely
+        const fmt = (mm_val) => {
+            let user_val = mm_val / scale;
+            let display_user = Number.isInteger(user_val) ? user_val : user_val.toFixed(2);
+            let display_mm = Math.round(mm_val);
+            if (currentUnit === 'mm') return `${display_mm} mm`;
+            return `${display_user} ${currentUnit} (${display_mm} mm)`;
+        };
+
+        let msg = `Hello,\n\nI need clear glass cut to the following exact dimensions.\n`;
+        msg += `Project Type: ${isFishTank ? 'Fish Tank Aquarium (No Top)' : 'Display Case'}\n`;
+        msg += `Glass Thickness: ${t} mm\n\n`;
+        
+        if (isFishTank) {
+            msg += `1. Bottom Base Glass\n   Dimension: ${fmt(l_mm)} x ${fmt(w_mm)}\n   Quantity: 1 piece\n\n`;
+        } else {
+            msg += `1. Top & Bottom Glasses\n   Dimension: ${fmt(l_mm)} x ${fmt(w_mm)}\n   Quantity: 2 pieces\n\n`;
+        }
+        
+        msg += `2. Front & Back Glasses\n   Dimension: ${fmt(l_mm)} x ${fmt(fH_mm)}\n   Quantity: 2 pieces\n\n`;
+        msg += `3. Left & Right Side Glasses\n   Dimension: ${fmt(sW_mm)} x ${fmt(fH_mm)}\n   Quantity: 2 pieces\n\n`;
+        
+        msg += `--------------------------------------\n`;
+        msg += `Cost Calculation Breakdown:\n`;
+        msg += `- ${isFishTank ? 'Bottom' : 'Top/Bottom'}: ${sqftBottom.toFixed(2)} sq ft × Rs ${price} = Rs ${costBottom.toFixed(2)}\n`;
+        msg += `- Front/Back: ${sqftFrontBack.toFixed(2)} sq ft × Rs ${price} = Rs ${costFrontBack.toFixed(2)}\n`;
+        msg += `- Left/Right: ${sqftLeftRight.toFixed(2)} sq ft × Rs ${price} = Rs ${costLeftRight.toFixed(2)}\n`;
+        msg += `\nTotal Area: ${totalSqFt.toFixed(2)} sq ft\n`;
+        msg += `Estimated Glass Cost: Rs ${totalCost.toFixed(2)}\n`;
+        msg += `--------------------------------------\n\n`;
+        msg += `Please ensure the cuts are highly accurate and the edges are clean. Please confirm the final cost. Thanks!`;
+
+        document.getElementById('outputMsg').value = msg;
+    }
+
+    // --- 3D RENDERING LOGIC ---
+    function init3D() {
+        const canvas = document.getElementById('renderCanvas');
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xF5F5F7);
+
+        camera = new THREE.PerspectiveCamera(45, (canvas.clientWidth / canvas.clientHeight) || 1, 1, 10000);
+        
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(100, 200, 50);
+        scene.add(directionalLight);
+
+        glassGroup = new THREE.Group();
+        scene.add(glassGroup);
+
+        const onPointerDown = (e) => {
+            isDragging = true;
+            previousMousePosition = { x: e.offsetX || e.touches[0].clientX, y: e.offsetY || e.touches[0].clientY };
+        };
+        const onPointerMove = (e) => {
+            if (isDragging) {
+                let currentX = e.offsetX || (e.touches ? e.touches[0].clientX : 0);
+                let currentY = e.offsetY || (e.touches ? e.touches[0].clientY : 0);
+                glassGroup.rotation.y += (currentX - previousMousePosition.x) * 0.01;
+                glassGroup.rotation.x += (currentY - previousMousePosition.y) * 0.01;
+                previousMousePosition = { x: currentX, y: currentY };
+            }
+        };
+        const onPointerUp = () => { isDragging = false; };
+
+        canvas.addEventListener('mousedown', onPointerDown);
+        canvas.addEventListener('mousemove', onPointerMove);
+        window.addEventListener('mouseup', onPointerUp);
+        canvas.addEventListener('touchstart', onPointerDown, {passive: true});
+        canvas.addEventListener('touchmove', onPointerMove, {passive: true});
+        window.addEventListener('touchend', onPointerUp);
+
+        const animate = function () {
+            requestAnimationFrame(animate);
+            const w = canvas.clientWidth;
+            const h = canvas.clientHeight;
+            if (canvas.width !== w || canvas.height !== h) {
+                renderer.setSize(w, h, false);
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+            }
+            if(!isDragging) glassGroup.rotation.y += 0.003;
+            renderer.render(scene, camera);
+        };
+        animate();
+    }
+
+    function createGlassPanel(w, h, d, x, y, z) {
+        const material = new THREE.MeshPhysicalMaterial({
+            color: 0x88ccff, metalness: 0.1, roughness: 0.1,
+            transmission: 0.8, opacity: 1, transparent: true, side: THREE.DoubleSide
+        });
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+        mesh.position.set(x, y, z);
+        const edges = new THREE.EdgesGeometry(mesh.geometry);
+        mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x005bb5, opacity: 0.5, transparent: true })));
+        return mesh;
+    }
+
+    function update3D(l, w, h, t, isFishTank) {
+        if (!glassGroup) return;
+        while(glassGroup.children.length > 0) glassGroup.remove(glassGroup.children[0]); 
+
+        let frontHeight = isFishTank ? (h - t) : (h - 2*t);
+        
+        // Origin Y = 0 is the floor
+        if (!isFishTank) {
+            glassGroup.add(createGlassPanel(l, t, w, 0, h - t/2, 0)); // Top Panel
+        }
+        glassGroup.add(createGlassPanel(l, t, w, 0, t/2, 0)); // Bottom Panel
+
+        // Walls Center Y
+        let wallsCenterY = isFishTank ? (t + frontHeight/2) : (h/2);
+
+        glassGroup.add(createGlassPanel(l, frontHeight, t, 0, wallsCenterY, w/2 - t/2)); // Front
+        glassGroup.add(createGlassPanel(l, frontHeight, t, 0, wallsCenterY, -w/2 + t/2)); // Back
+        glassGroup.add(createGlassPanel(t, frontHeight, w - 2*t, -l/2 + t/2, wallsCenterY, 0)); // Left
+        glassGroup.add(createGlassPanel(t, frontHeight, w - 2*t, l/2 - t/2, wallsCenterY, 0)); // Right
+
+        const canvas = document.getElementById('renderCanvas');
+        const aspect = canvas.clientWidth / (canvas.clientHeight || 1);
+        const maxDim = Math.max(l, w, h);
+        const distanceMultiplier = aspect < 1 ? 2.5 : 1.5;
+        
+        camera.position.set(0, maxDim * 0.8, maxDim * distanceMultiplier);
+        camera.lookAt(0, h/2, 0);
+    }
+
+    // --- 2D CUTTING LAYOUT LOGIC ---
+    function update2DLayout(l_mm, w_mm, fH_mm, sW_mm, isFishTank) {
+        const canvas = document.getElementById('layoutCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        const kerf = 4; // 4mm saw gap
+        let rows = [];
+        
+        if (!isFishTank) rows.push([{ name: "Top", w: l_mm, h: w_mm }]);
+        rows.push([{ name: "Bottom", w: l_mm, h: w_mm }]);
+        rows.push([{ name: "Front", w: l_mm, h: fH_mm }]);
+        rows.push([{ name: "Back", w: l_mm, h: fH_mm }]);
+        rows.push([{ name: "Left", w: sW_mm, h: fH_mm }, { name: "Right", w: sW_mm, h: fH_mm }]);
+
+        let plateWidth = 0;
+        let plateHeight = kerf;
+        rows.forEach(row => {
+            let rowWidth = kerf;
+            let maxH = 0;
+            row.forEach(p => {
+                rowWidth += p.w + kerf;
+                if (p.h > maxH) maxH = p.h;
+            });
+            if (rowWidth > plateWidth) plateWidth = rowWidth;
+            plateHeight += maxH + kerf;
+        });
+
+        const padding = 20;
+        const scaleX = (width - padding * 2) / plateWidth;
+        const scaleY = (height - padding * 2) / plateHeight;
+        const scale = Math.min(scaleX, scaleY);
+
+        const offsetX = (width - (plateWidth * scale)) / 2;
+        const offsetY = (height - (plateHeight * scale)) / 2;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw Raw Glass Plate
+        ctx.fillStyle = "#e6f2ff";
+        ctx.fillRect(offsetX, offsetY, plateWidth * scale, plateHeight * scale);
+        ctx.strokeStyle = "#005bb5";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(offsetX, offsetY, plateWidth * scale, plateHeight * scale);
+
+        ctx.fillStyle = "#005bb5";
+        ctx.font = "bold 12px Arial";
+        ctx.fillText(`Raw Glass Size Needed: ${Math.round(plateWidth)}mm x ${Math.round(plateHeight)}mm`, offsetX, offsetY - 6);
+
+        let currentY = kerf;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        rows.forEach(row => {
+            let currentX = kerf;
+            let maxH = 0;
+            
+            row.forEach(p => {
+                let px = offsetX + (currentX * scale);
+                let py = offsetY + (currentY * scale);
+                let pw = p.w * scale;
+                let ph = p.h * scale;
+
+                ctx.fillStyle = "rgba(0, 122, 255, 0.2)";
+                ctx.fillRect(px, py, pw, ph);
+                ctx.strokeStyle = "#007AFF";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(px, py, pw, ph);
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(px, py, pw, ph);
+                ctx.clip(); 
+                
+                ctx.fillStyle = "#000";
+                let fontSize = pw < 50 ? 8 : (pw < 70 ? 9 : 11);
+                ctx.font = `${fontSize}px Arial`;
+                
+                // Show dimensions rounded in layout
+                ctx.fillText(p.name, px + pw/2, py + ph/2 - (fontSize/2 + 1));
+                ctx.fillText(`(${Math.round(p.w)}x${Math.round(p.h)})`, px + pw/2, py + ph/2 + (fontSize/2 + 1));
+                ctx.restore();
+
+                currentX += p.w + kerf;
+                if (p.h > maxH) maxH = p.h;
+            });
+            currentY += maxH + kerf;
+        });
+
+        // Waste Calc
+        let usedArea = 0;
+        rows.forEach(r => r.forEach(p => usedArea += (p.w * p.h)));
+        let wastePercent = (((plateWidth * plateHeight) - usedArea) / (plateWidth * plateHeight)) * 100;
+        document.getElementById('wasteInfo').innerText = `Estimated Glass Wastage: ${wastePercent.toFixed(1)}%`;
+    }
+
+    function copyMessage() {
+        let copyText = document.getElementById("outputMsg");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); 
+        try {
+            document.execCommand('copy');
+            showToast("Message copied to clipboard!");
+        } catch (err) {
+            alert("Could not copy text automatically. Please copy it manually.");
+        }
+    }
+
+    // --- STL EXPORT LOGIC ---
+    function downloadSTL() {
+        if (typeof THREE.STLExporter === 'undefined') {
+            showToast("STL Exporter failed to load!", true);
+            return;
+        }
+        
+        // Ensure glassGroup has children to export
+        if (!glassGroup || glassGroup.children.length === 0) {
+            showToast("Nothing to export!", true);
+            return;
+        }
+
+        try {
+            const exporter = new THREE.STLExporter();
+            const stlString = exporter.parse(glassGroup);
+            
+            // Create a Blob from the STL string
+            const blob = new Blob([stlString], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create a temporary link element to trigger the download
+            const link = document.createElement('a');
+            link.style.display = 'none';
+            link.href = url;
+            link.download = 'Glass_Project_Preview.stl';
+            
+            document.body.appendChild(link);
+            link.click();
+            
+            // Clean up
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showToast("STL file downloaded successfully!");
+        } catch (error) {
+            console.error("Error generating STL:", error);
+            showToast("Error generating STL file.", true);
+        }
+    }
+
+    window.onload = function() {
+        init3D();
+        calculateAll();
+        window.addEventListener('resize', calculateAll);
+    };
+</script>
+
+</body>
+</html>
